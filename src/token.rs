@@ -33,7 +33,7 @@
     LET      = "LET"
 */
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Hash, Eq)]
 pub enum TokenType {
     ILLEGAL,
     EOF,
@@ -66,16 +66,16 @@ pub enum TokenType {
     NotEQ,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Token {
-    pub r#type: TokenType,
+    pub typ: TokenType,
     pub literal: String,
 }
 
 impl Token {
-    pub fn new(r#type: TokenType, literal: &str) -> Self {
+    pub fn new(typ: TokenType, literal: &str) -> Self {
         Self {
-            r#type,
+            typ,
             literal: literal.to_string(),
         }
     }

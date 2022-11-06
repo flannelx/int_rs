@@ -16,7 +16,7 @@ impl Repl {
             stdin().read_line(&mut buf)?;
             let mut l = Lexer::new(&buf);
             let mut t = l.next_token();
-            while t.r#type != TokenType::EOF {
+            while t.typ != TokenType::EOF {
                 println!("{:?}", t);
                 t = l.next_token();
             }

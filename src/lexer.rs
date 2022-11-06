@@ -7,6 +7,10 @@ pub struct Lexer<'a> {
     input: Peekable<Chars<'a>>,
 }
 
+pub fn is_whitespace(c: &char) -> bool {
+    c == &' ' || c == &'\t' || c == &'\n' || c == &'\r'
+}
+
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Lexer<'a> {
         Self {
@@ -15,14 +19,16 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn skip_whitespace(&mut self) {
-        while let Some(c) = self.input.peek() && (c == &' ' || c == &'\t' || c == &'\n' || c == &'\r') {
+        while self.input.peek().is_some() && is_whitespace(self.input.peek().unwrap()) {
             self.input.next();
         }
     }
 
     pub fn next_ident(&mut self) -> Option<Token> {
         let mut ident_literal = String::new();
-        while let Some(c) = self.input.peek() && Self::char_to_token(c) == TokenType::IDENT {
+        while self.input.peek().is_some()
+            && Self::char_to_token(self.input.peek().unwrap()) == TokenType::IDENT
+        {
             ident_literal.push(self.input.next().unwrap());
         }
         if ident_literal.is_empty() {
@@ -31,19 +37,23 @@ impl<'a> Lexer<'a> {
         if let Some(keyword) = Self::check_keyword(&ident_literal) {
             return Some(Token::new(keyword, &ident_literal));
         }
-        return Some(Token::new(TokenType::IDENT, &ident_literal));
+
+        Some(Token::new(TokenType::IDENT, &ident_literal))
     }
 
     pub fn next_int(&mut self) -> Option<Token> {
         let mut int_literal = String::new();
-        while let Some(c) = self.input.peek() && Self::char_to_token(c) == TokenType::INT {
+        while self.input.peek().is_some()
+            && Self::char_to_token(self.input.peek().unwrap()) == TokenType::INT
+        {
             int_literal.push(self.input.next().unwrap());
         }
 
         if int_literal.is_empty() {
             return None;
         }
-        return Some(Token::new(TokenType::INT, &int_literal));
+
+        Some(Token::new(TokenType::INT, &int_literal))
     }
 
     pub fn next_token(&mut self) -> Token {
@@ -60,14 +70,17 @@ impl<'a> Lexer<'a> {
 
         // Check '==' '!=' etc, should be in its own function later on
         let c = self.input.next().unwrap();
-        if (c == '=' || c == '!') && let Some(nxt_c) = self.input.peek() {
-            let literal: String = vec![c, *nxt_c].iter().collect();
-            if let Some(keyword) = Self::check_keyword(&literal) {
-                self.input.next();
-                return Token::new(keyword, &literal);
+        if c == '=' || c == '!' {
+            if let Some(nxt_c) = self.input.peek() {
+                let literal: String = vec![c, *nxt_c].iter().collect();
+                if let Some(keyword) = Self::check_keyword(&literal) {
+                    self.input.next();
+                    return Token::new(keyword, &literal);
+                }
             }
         }
-        return Token::new(Self::char_to_token(&c), &c.to_string());
+
+        Token::new(Self::char_to_token(&c), &c.to_string())
     }
 
     pub fn char_to_token(c: &char) -> TokenType {
@@ -212,7 +225,7 @@ fn test_next_token() {
     ];
     for expected in tests {
         let token = lexer.next_token();
-        println!("\n{:?}\n{:?}", expected, token);
+        //println!("\n{:?}\n{:?}", expected, token);
         assert!(token == expected);
     }
 }
