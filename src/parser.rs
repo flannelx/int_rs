@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use anyhow::anyhow;
 use crate::{
-    ast::{Expression, Identifier, LetStatement, Program, ReturnStatement, Statement},
+    ast::{Expression, Identifier, Program, Statement},
     lexer::Lexer,
     token::{Token, TokenType},
 };
@@ -69,11 +69,11 @@ impl<'a> Parser<'a> {
             token: value,
         };
 
-        Ok(Statement::LetStatement(LetStatement {
+        Ok(Statement::LetStatement {
             token,
             identifier,
             expression,
-        }))
+        })
     }
 
     pub fn parse_return_statement(&mut self, token: Token) -> anyhow::Result<Statement> {
@@ -82,10 +82,10 @@ impl<'a> Parser<'a> {
             value: expression_token.literal.clone(),
             token: expression_token,
         };
-        Ok(Statement::ReturnStatement(ReturnStatement {
+        Ok(Statement::ReturnStatement {
             token,
             expression,
-        }))
+        })
     }
 
     pub fn parse_identifier(&mut self) -> anyhow::Result<Identifier> {
