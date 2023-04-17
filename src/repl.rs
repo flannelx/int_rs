@@ -1,7 +1,7 @@
 const PROMPT: &str = "Rust >> ";
 
 use crate::lexer::Lexer;
-use crate::token::TokenType;
+use crate::token::TokenKind;
 use anyhow::Result;
 use std::io::{stdin, stdout, Write};
 
@@ -16,7 +16,7 @@ impl Repl {
             stdin().read_line(&mut buf)?;
             let mut l = Lexer::new(&buf);
             let mut t = l.next_token();
-            while t.typ != TokenType::EOF {
+            while t.kind != TokenKind::EOF {
                 println!("{:?}", t);
                 t = l.next_token();
             }

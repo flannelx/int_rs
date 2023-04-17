@@ -34,49 +34,51 @@
 */
 
 #[derive(PartialEq, Debug, Clone, Hash, Eq)]
-pub enum TokenType {
-    ILLEGAL,
+pub enum TokenKind {
+    Illegal,
     EOF,
-    IDENT,
-    INT,
-    ASSIGN,
-    PLUS,
-    COMMA,
-    SEMICOLON,
-    LPAREN,
-    RPAREN,
-    LBRACE,
-    RBRACE,
-    FUNCTION,
-    LET,
-    MINUS,
-    BANG,
-    ASTERISK,
-    SLASH,
-    LT,
-    GT,
+    Identifier,
+    Int,
+    Assign,
+    Plus,
+    Comma,
+    Semicolon,
+    LParen,
+    RParen,
+    LBrace,
+    RBrace,
+    Function,
+    Let,
+    Minus,
+    Bang,
+    Asterisk,
+    Slash,
+    Less,
+    Greater,
+    LessEqual,
+    GreaterEqual,
 
-    TRUE,
-    FALSE,
-    IF,
-    ELSE,
-    RETURN,
+    True,
+    False,
+    If,
+    Else,
+    Return,
 
-    EQ,
-    NotEQ,
+    Equal,
+    NotEqual,
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Token {
-    pub typ: TokenType,
-    pub literal: String,
+    pub kind: TokenKind,
+    pub raw: String,
 }
 
 impl Token {
-    pub fn new(typ: TokenType, literal: &str) -> Self {
+    pub fn new(typ: TokenKind, literal: &str) -> Self {
         Self {
-            typ,
-            literal: literal.to_string(),
+            kind: typ,
+            raw: literal.to_string(),
         }
     }
 }
