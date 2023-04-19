@@ -3,11 +3,21 @@ use crate::{
     token::{Token, TokenKind},
 };
 use anyhow::bail;
-use ast::{Expr, Infix, Prefix, Program, Stmt, Literal};
+use ast::{Expr, Infix, Literal, Prefix, Program, Stmt};
 
 macro_rules! prec {
     ($token:expr) => {
         Precedence::from_token($token)
+    };
+}
+
+macro_rules! bool {
+    ($bool:expr) => {
+        match $bool {
+            "true" => true,
+            "false" => false,
+            _ => bail!("Expected a boolean string 'true' or 'false'"),
+        }
     };
 }
 
@@ -152,16 +162,16 @@ impl<'a> Parser<'a> {
 
     pub fn parse_atom_expr(&mut self) -> anyhow::Result<Expr> {
         use TokenKind::*;
+        #[cfg_attr(rustfmt, rustfmt_skip)]
         match &self.curr_token.kind {
-            Identifier => Ok(Expr::Identifier(self.curr_token.raw.clone())),
-            Int => Ok(Expr::Integer(self.curr_token.raw.parse::<i64>()?)),
-            String => Ok(Expr::Literal(Literal::String(self.curr_token.raw.clone()))),
-            Function => todo!(),
             Plus | Minus | Bang => Ok(self.parse_prefix_expr()?),
-            True => todo!(),
-            False => todo!(),
-            If => todo!(),
-            t => bail!("Expected a prefix, got {:?}", self.curr_token),
+            True | False        => Ok(Expr::Literal(Literal::Bool(bool!(self.curr_token.raw.as_str())))),
+            Identifier          => Ok(Expr::Identifier(self.curr_token.raw.clone())),
+            Int                 => Ok(Expr::Literal(Literal::Int(self.curr_token.raw.parse::<i64>()?))),
+            String              => Ok(Expr::Literal(Literal::String(self.curr_token.raw.clone()))),
+            Function            => todo!(),
+            If                  => todo!(),
+            t                   => bail!("Expected a prefix, got {:?}", self.curr_token),
         }
     }
 
@@ -221,7 +231,7 @@ fn parse_prefix_test() {
     }
     let expected = vec![
         Expr::Identifier("x".to_string()),
-        Expr::Integer(123),
+        Expr::Literal(Literal::Int(123)),
         Expr::Literal(Literal::String("123".to_string())),
     ];
     assert!(expected == v);
@@ -233,6 +243,8 @@ fn parse_let_stmt() {
     let x = 100;
     let y = 200;
     let s = "123";
+    let b = true;
+    let b = false;
 
     x + y;
     x - y;
@@ -261,9 +273,11 @@ fn parse_let_stmt() {
     let program = p.parse_program().unwrap();
     #[cfg_attr(rustfmt, rustfmt_skip)]
     let expected = vec![
-       Stmt::LetStatement { ident: "x".to_string(), expr: Expr::Integer(100) },
-       Stmt::LetStatement { ident: "y".to_string(), expr: Expr::Integer(200) },
+       Stmt::LetStatement { ident: "x".to_string(), expr: Expr::Literal(Literal::Int(100)) },
+       Stmt::LetStatement { ident: "y".to_string(), expr: Expr::Literal(Literal::Int(200)) },
        Stmt::LetStatement { ident: "s".to_string(), expr: Expr::Literal(Literal::String("123".to_string())) },
+       Stmt::LetStatement { ident: "b".to_string(), expr: Expr::Literal(Literal::Bool(true))},
+       Stmt::LetStatement { ident: "b".to_string(), expr: Expr::Literal(Literal::Bool(false))},
 
        Stmt::ExprStmt(Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Plus, right: Box::new(Expr::Identifier("y".to_string())) }),
        Stmt::ExprStmt(Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Minus, right: Box::new(Expr::Identifier("y".to_string())) }),
@@ -272,9 +286,9 @@ fn parse_let_stmt() {
        Stmt::LetStatement { ident: "z".to_string(), expr: Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Plus, right: Box::new(Expr::Identifier("y".to_string())) } },
        Stmt::LetStatement { ident: "z".to_string(), expr: Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Minus, right: Box::new(Expr::Identifier("y".to_string())) } },
        Stmt::LetStatement { ident: "z".to_string(), expr: Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Multiply, right: Box::new(Expr::Identifier("y".to_string())) } },
-       Stmt::LetStatement { ident: "z".to_string(), expr: Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Plus, right: Box::new(Expr::Integer(300)) } },
-       Stmt::LetStatement { ident: "z".to_string(), expr: Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Minus, right: Box::new(Expr::Integer(300)) } },
-       Stmt::LetStatement { ident: "z".to_string(), expr: Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Multiply, right: Box::new(Expr::Integer(300)) } },
+       Stmt::LetStatement { ident: "z".to_string(), expr: Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Plus, right: Box::new(Expr::Literal(Literal::Int(300))) } },
+       Stmt::LetStatement { ident: "z".to_string(), expr: Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Minus, right: Box::new(Expr::Literal(Literal::Int(300))) } },
+       Stmt::LetStatement { ident: "z".to_string(), expr: Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Multiply, right: Box::new(Expr::Literal(Literal::Int(300))) } },
 
        Stmt::ExprStmt(Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Lt, right: Box::new(Expr::Identifier("y".to_string())) }),
        Stmt::ExprStmt(Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Gt, right: Box::new(Expr::Identifier("y".to_string())) }),
