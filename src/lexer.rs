@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::token::{Token, TokenKind};
 use std::{iter::Peekable, str::Chars};
 
@@ -59,6 +57,9 @@ impl<'a> Lexer<'a> {
         if let Some(token) = self.next_int() {
             return token;
         }
+        if let Some(token) = self.parse_string() {
+            return token;
+        }
 
         // Check '==' '!=' etc, should be in its own function later on
         let c = self.input.next().unwrap();
@@ -75,6 +76,18 @@ impl<'a> Lexer<'a> {
         Token::new(Self::char_to_token(&c), &c.to_string())
     }
 
+    pub fn parse_string(&mut self) -> Option<Token> {
+        if self.input.peek().is_none() || self.input.peek().unwrap() != &'"' {
+            return None;
+        }
+        self.input.next();
+        let mut s = String::new();
+        while let Some(c) = self.input.next() && c != '"'{
+            s.push(c);
+        }
+        Some(Token { kind: TokenKind::String, raw: s })
+    }
+
     pub fn char_to_token(c: &char) -> TokenKind {
         match c {
             '=' => TokenKind::Assign,
@@ -83,14 +96,16 @@ impl<'a> Lexer<'a> {
             ')' => TokenKind::RParen,
             '{' => TokenKind::LBrace,
             '}' => TokenKind::RBrace,
+            '[' => TokenKind::LBracket,
+            ']' => TokenKind::RBracket,
             ',' => TokenKind::Comma,
             ';' => TokenKind::Semicolon,
             '-' => TokenKind::Minus,
             '!' => TokenKind::Bang,
             '*' => TokenKind::Asterisk,
             '/' => TokenKind::Slash,
-            '<' => TokenKind::Less,
-            '>' => TokenKind::Greater,
+            '<' => TokenKind::Lt,
+            '>' => TokenKind::Gt,
             '0'..='9' => TokenKind::Int,
             '_' | 'A'..='z' => TokenKind::Identifier,
             _ => TokenKind::Illegal,
@@ -109,8 +124,8 @@ impl<'a> Lexer<'a> {
             "return" => TokenKind::Return,
             "!=" => TokenKind::NotEqual,
             "==" => TokenKind::Equal,
-            "<=" => TokenKind::LessEqual,
-            ">=" => TokenKind::GreaterEqual,
+            "<=" => TokenKind::Lte,
+            ">=" => TokenKind::Gte,
             _ => return None,
             //_ => TokenType::ILLEGAL,
         };
@@ -118,12 +133,14 @@ impl<'a> Lexer<'a> {
     }
 }
 
+
 #[test]
 fn test_next_token() {
     let mut lexer = Lexer::new(
         r#"
         let five = 5;
         let ten = 10;
+        let s = "123";
 
         let add = fn(x, y) {
           x + y;
@@ -142,6 +159,7 @@ fn test_next_token() {
         10 == 10;
         10 != 9;
         10 <= 9;
+        10 >= 9;
     "#,
     );
     let tests = vec![
@@ -154,6 +172,11 @@ fn test_next_token() {
         Token::new(TokenKind::Identifier, "ten"),
         Token::new(TokenKind::Assign, "="),
         Token::new(TokenKind::Int, "10"),
+        Token::new(TokenKind::Semicolon, ";"),
+        Token::new(TokenKind::Let, "let"),
+        Token::new(TokenKind::Identifier, "s"),
+        Token::new(TokenKind::Assign, "="),
+        Token::new(TokenKind::String, "123"),
         Token::new(TokenKind::Semicolon, ";"),
         Token::new(TokenKind::Let, "let"),
         Token::new(TokenKind::Identifier, "add"),
@@ -188,15 +211,15 @@ fn test_next_token() {
         Token::new(TokenKind::Int, "5"),
         Token::new(TokenKind::Semicolon, ";"),
         Token::new(TokenKind::Int, "5"),
-        Token::new(TokenKind::Less, "<"),
+        Token::new(TokenKind::Lt, "<"),
         Token::new(TokenKind::Int, "10"),
-        Token::new(TokenKind::Greater, ">"),
+        Token::new(TokenKind::Gt, ">"),
         Token::new(TokenKind::Int, "5"),
         Token::new(TokenKind::Semicolon, ";"),
         Token::new(TokenKind::If, "if"),
         Token::new(TokenKind::LParen, "("),
         Token::new(TokenKind::Int, "5"),
-        Token::new(TokenKind::Less, "<"),
+        Token::new(TokenKind::Lt, "<"),
         Token::new(TokenKind::Int, "10"),
         Token::new(TokenKind::RParen, ")"),
         Token::new(TokenKind::LBrace, "{"),
@@ -219,13 +242,17 @@ fn test_next_token() {
         Token::new(TokenKind::Int, "9"),
         Token::new(TokenKind::Semicolon, ";"),
         Token::new(TokenKind::Int, "10"),
-        Token::new(TokenKind::LessEqual, "<="),
+        Token::new(TokenKind::Lte, "<="),
+        Token::new(TokenKind::Int, "9"),
+        Token::new(TokenKind::Semicolon, ";"),
+        Token::new(TokenKind::Int, "10"),
+        Token::new(TokenKind::Gte, ">="),
         Token::new(TokenKind::Int, "9"),
         Token::new(TokenKind::Semicolon, ";"),
     ];
     for expected in tests {
         let token = lexer.next_token();
-        //println!("\n{:?}\n{:?}", expected, token);
+        // println!("\n{:?}\n{:?}", expected, token);
         assert!(token == expected);
     }
 }

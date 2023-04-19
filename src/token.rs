@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 /*
     ILLEGAL = "ILLEGAL"
     EOF     = "EOF"
@@ -39,6 +37,7 @@ pub enum TokenKind {
     EOF,
     Identifier,
     Int,
+    String,
     Assign,
     Plus,
     Comma,
@@ -47,16 +46,18 @@ pub enum TokenKind {
     RParen,
     LBrace,
     RBrace,
+    LBracket,
+    RBracket,
     Function,
     Let,
     Minus,
     Bang,
     Asterisk,
     Slash,
-    Less,
-    Greater,
-    LessEqual,
-    GreaterEqual,
+    Lt,
+    Gt,
+    Lte,
+    Gte,
 
     True,
     False,

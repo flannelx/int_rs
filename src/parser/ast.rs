@@ -1,14 +1,16 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Program {
-    stmt: Vec<Stmt>
+    pub stmt: Vec<Stmt>
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Identifier(String),
     Literal(Literal),
-    Prefix { prefix: Prefix, expr: Box<Expr> },
-    Infix { infix: Infix, expr: Box<Expr> },
+    Prefix { op: Prefix, right: Box<Expr> },
+    Infix { left: Box<Expr>, op: Infix, right: Box<Expr> },
+    Integer(i64),
+    String(String),
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -26,20 +28,20 @@ pub enum Infix {
     Multiply,
     Equal,
     NotEqual,
-    GreaterThanEqual,
-    LessThanEqual,
-    GreaterThan,
-    LessThan,
+    Gte,
+    Lte,
+    Gt,
+    Lt,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Int(i64),
     Bool(bool),
     String(String),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
     LetStatement { ident: String, expr: Expr },
     ReturnStatement(Expr),
