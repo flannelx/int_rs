@@ -10,7 +10,6 @@ pub enum Expr {
     Prefix { op: Prefix, right: Box<Expr> },
     Infix { left: Box<Expr>, op: Infix, right: Box<Expr> },
     Integer(i64),
-    String(String),
 }
 
 #[derive(PartialEq, Debug, Clone)]

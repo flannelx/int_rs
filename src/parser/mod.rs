@@ -3,7 +3,7 @@ use crate::{
     token::{Token, TokenKind},
 };
 use anyhow::bail;
-use ast::{Expr, Infix, Prefix, Program, Stmt};
+use ast::{Expr, Infix, Prefix, Program, Stmt, Literal};
 
 macro_rules! prec {
     ($token:expr) => {
@@ -60,6 +60,19 @@ impl<'a> Parser<'a> {
         }
     }
 
+    // This is just sugar for self.lexer next() && peek()
+    //
+    // Only use advance on parse_x_statment() or recursive parsing fn() to avoid confusion - ';'
+    // Because we skip semicolon on 'curr', under parse_statement() you will have to manually skip
+    // it or a recursive parsing fn() will skip it at it's base case
+    //
+    // Otherwise it is very easy to over advance and skip 'let' or under advance and gives ';' to a
+    // prefix parse fn().
+    //
+    // Since parsing relys on ';' to stop, you can not auto skip ';' here, otherwise will over advance
+    //
+    // !TODO Looking for a better solution. Perhaps just lex all tokens and store in a Deque, but
+    // that does not solve all the problem, we still have to check 'curr' token kind.
     pub fn advance(&mut self) {
         std::mem::swap(&mut self.curr_token, &mut self.next_token);
         self.next_token = self.lexer.next_token();
@@ -142,7 +155,7 @@ impl<'a> Parser<'a> {
         match &self.curr_token.kind {
             Identifier => Ok(Expr::Identifier(self.curr_token.raw.clone())),
             Int => Ok(Expr::Integer(self.curr_token.raw.parse::<i64>()?)),
-            String => Ok(Expr::String(self.curr_token.raw.clone())),
+            String => Ok(Expr::Literal(Literal::String(self.curr_token.raw.clone()))),
             Function => todo!(),
             Plus | Minus | Bang => Ok(self.parse_prefix_expr()?),
             True => todo!(),
@@ -209,7 +222,7 @@ fn parse_prefix_test() {
     let expected = vec![
         Expr::Identifier("x".to_string()),
         Expr::Integer(123),
-        Expr::String("123".to_string()),
+        Expr::Literal(Literal::String("123".to_string())),
     ];
     assert!(expected == v);
 }
@@ -250,7 +263,7 @@ fn parse_let_stmt() {
     let expected = vec![
        Stmt::LetStatement { ident: "x".to_string(), expr: Expr::Integer(100) },
        Stmt::LetStatement { ident: "y".to_string(), expr: Expr::Integer(200) },
-       Stmt::LetStatement { ident: "s".to_string(), expr: Expr::String("123".to_string()) },
+       Stmt::LetStatement { ident: "s".to_string(), expr: Expr::Literal(Literal::String("123".to_string())) },
 
        Stmt::ExprStmt(Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Plus, right: Box::new(Expr::Identifier("y".to_string())) }),
        Stmt::ExprStmt(Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Minus, right: Box::new(Expr::Identifier("y".to_string())) }),
