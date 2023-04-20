@@ -24,8 +24,8 @@ pub enum Expr {
         body: Program,
     },
     Call {
-        func: Box<Expr>,
-        args: Box<Expr>,
+        func: Box<Expr>, // Box<Expr::Identifier>
+        args: Vec<Expr>,
     }
 }
 

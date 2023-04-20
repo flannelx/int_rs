@@ -96,7 +96,9 @@ impl<'a> Parser<'a> {
 
         while self.curr_token.kind != TokenKind::EOF {
             program.push(self.parse_statement()?);
-            self.advance();
+            if self.curr_token.kind == TokenKind::Semicolon {
+                self.advance();
+            }
         }
 
         Ok(program)
@@ -120,12 +122,15 @@ impl<'a> Parser<'a> {
             return Ok(left);
         }
         self.advance();
-        match prec!(&self.next_token.kind) {
-            Precedence::Call => todo!(),
+        match prec!(&self.curr_token.kind) {
+            Precedence::Call if prec < Precedence::Call => {
+                let expr = self.parse_call_expr(left)?;
+                self.parse_expr_recursive(prec, expr)
+            }
             Precedence::Index => todo!(),
-            p if p < prec!(&self.curr_token.kind) => {
+            p if prec < p => {
                 let left2 = self.parse_infix_expr(Box::new(left))?;
-                Ok(self.parse_expr_recursive(prec, left2)?)
+                self.parse_expr_recursive(prec, left2)
             }
             _ => Ok(left),
         }
@@ -260,28 +265,52 @@ impl<'a> Parser<'a> {
         }
         self.advance();
         let body = self.parse_block_stmt()?;
-        Ok(Expr::Function { ident, params, body })
+        Ok(Expr::Function {
+            ident,
+            params,
+            body,
+        })
     }
 
     pub fn parse_if_expr(&mut self) -> anyhow::Result<Expr> {
         todo!()
     }
 
-    pub fn parse_call_expr(&mut self) -> anyhow::Result<Expr> {
-        todo!()
+    pub fn parse_call_expr(&mut self, ident: Expr) -> anyhow::Result<Expr> {
+        use TokenKind::*;
+        if self.curr_token.kind != LParen {
+            bail!("Expected left parenthese, got {:?}", self.curr_token);
+        }
+        self.advance();
+        let mut args = Vec::new();
+        while !matches!(self.curr_token.kind, RParen | EOF) {
+            if self.curr_token.kind != Comma {
+                args.push(self.parse_atom_expr()?);
+            }
+            self.advance();
+        }
+        if self.curr_token.kind == RParen {
+            self.advance();
+        }
+
+        Ok(Expr::Call {
+            func: Box::new(ident),
+            args,
+        })
     }
 
     pub fn parse_block_stmt(&mut self) -> anyhow::Result<Program> {
-        if self.curr_token.kind != TokenKind::LBrace {
+        use TokenKind::*;
+        if self.curr_token.kind != LBrace {
             bail!("Expected a '{{', got {:?}", self.curr_token);
         }
         self.advance();
         let mut program: Program = Vec::new();
-        while !matches!(self.curr_token.kind, TokenKind::EOF | TokenKind::RBrace) {
+        while !matches!(self.curr_token.kind, EOF | RBrace) {
             program.push(self.parse_statement()?);
             self.advance();
         }
-        if self.curr_token.kind == TokenKind::RBrace {
+        if self.curr_token.kind == RBrace {
             self.advance();
         }
         Ok(program)
@@ -391,7 +420,6 @@ fn parse_stmt() {
     for (res, exp) in program.iter().zip(expected.iter()) {
         assert_eq!(res, exp);
     }
-
 }
 
 #[test]
@@ -407,11 +435,64 @@ fn parse_fn_test() {
     let mut p = Parser::new(input);
     let program = p.parse_program().unwrap();
     let expected = vec![
-        Stmt::ExprStmt(Expr::Function { ident: "sum".to_string(), params: vec!["x".to_string(), "y".to_string()], body: vec![
-            Stmt::ReturnStatement(Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Plus, right: Box::new(Expr::Identifier("y".to_string())) }),
-        ]}),
-        Stmt::ExprStmt(Expr::Function { ident: "sum".to_string(), params: vec!["x".to_string(), "y".to_string()], body: vec![
-            Stmt::ExprStmt(Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Plus, right: Box::new(Expr::Identifier("y".to_string())) }),
-        ]}),
+        Stmt::ExprStmt(Expr::Function {
+            ident: "sum".to_string(),
+            params: vec!["x".to_string(), "y".to_string()],
+            body: vec![Stmt::ReturnStatement(Expr::Infix {
+                left: Box::new(Expr::Identifier("x".to_string())),
+                op: Infix::Plus,
+                right: Box::new(Expr::Identifier("y".to_string())),
+            })],
+        }),
+        Stmt::ExprStmt(Expr::Function {
+            ident: "sum".to_string(),
+            params: vec!["x".to_string(), "y".to_string()],
+            body: vec![Stmt::ExprStmt(Expr::Infix {
+                left: Box::new(Expr::Identifier("x".to_string())),
+                op: Infix::Plus,
+                right: Box::new(Expr::Identifier("y".to_string())),
+            })],
+        }),
     ];
+
+    for (p, e) in program.iter().zip(expected.iter()) {
+        assert_eq!(p, e)
+    }
+}
+
+#[test]
+fn parse_call_test() {
+    let input = r#"
+    fn sum(x, y) {
+        x + y;
+    };
+    let s = sum(100, 10);
+    "#;
+    let mut p = Parser::new(input);
+    let program = p.parse_program().unwrap();
+    let expected = vec![
+        Stmt::ExprStmt(Expr::Function {
+            ident: "sum".to_string(),
+            params: vec!["x".to_string(), "y".to_string()],
+            body: vec![Stmt::ExprStmt(Expr::Infix {
+                left: Box::new(Expr::Identifier("x".to_string())),
+                op: Infix::Plus,
+                right: Box::new(Expr::Identifier("y".to_string())),
+            })],
+        }),
+        Stmt::LetStatement {
+            ident: "s".to_string(),
+            expr: Expr::Call {
+                func: Box::new(Expr::Identifier("sum".to_string())),
+                args: vec![
+                    Expr::Literal(Literal::Int(100)),
+                    Expr::Literal(Literal::Int(10)),
+                ],
+            },
+        },
+    ];
+
+    for (p, e) in program.iter().zip(expected.iter()) {
+        assert_eq!(p, e)
+    }
 }
