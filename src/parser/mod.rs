@@ -178,7 +178,7 @@ impl<'a> Parser<'a> {
             Int                 => Ok(Expr::Literal(Literal::Int(self.curr_token.raw.parse::<i64>()?))),
             String              => Ok(Expr::Literal(Literal::String(self.curr_token.raw.clone()))),
             Function            => self.parse_fn_expr(),
-            If                  => todo!(),
+            If                  => self.parse_if_expr(),
             t                   => bail!("Atom Expr: Unexpected token:{:?}", self.curr_token),
         }
     }
@@ -273,7 +273,33 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_if_expr(&mut self) -> anyhow::Result<Expr> {
-        todo!()
+        use TokenKind::*;
+        if self.curr_token.kind != If {
+            bail!("Expected 'if', got {:?}", self.curr_token);
+        }
+        self.advance();
+        if self.curr_token.kind != LParen {
+            bail!("Expected '(' for condition, got {:?}", self.curr_token);
+        }
+        self.advance();
+        let cond = self.parse_expr(Precedence::Lowest)?;
+        if self.curr_token.kind == RParen {
+            self.advance();
+        }
+        let program = self.parse_block_stmt()?;
+        let alt = {
+            if self.curr_token.kind != Else {
+                None
+            } else {
+                self.advance();
+                Some(self.parse_block_stmt()?)
+            }
+        };
+        Ok(Expr::If {
+            cond: Box::new(cond),
+            body: program,
+            alt,
+        })
     }
 
     pub fn parse_call_expr(&mut self, ident: Expr) -> anyhow::Result<Expr> {
@@ -489,6 +515,73 @@ fn parse_call_test() {
                     Expr::Literal(Literal::Int(10)),
                 ],
             },
+        },
+    ];
+
+    for (p, e) in program.iter().zip(expected.iter()) {
+        assert_eq!(p, e)
+    }
+}
+
+#[test]
+fn parse_if_test() {
+    let input = r#"
+    let x = 100;
+    if (2 == 2) {
+        x + 1;
+    };
+    let x = 100;
+    if (2 == 2) {
+        x + 1;
+    } else {
+        1 + 1;
+    };
+    let x = 100;
+    "#;
+    let mut p = Parser::new(input);
+    let program = p.parse_program().unwrap();
+    let expected = vec![
+        Stmt::LetStatement {
+            ident: "x".to_string(),
+            expr: Expr::Literal(Literal::Int(100)),
+        },
+        Stmt::ExprStmt(Expr::If {
+            cond: Box::new(Expr::Infix {
+                left: Box::new(Expr::Literal(Literal::Int(2))),
+                op: Infix::Equal,
+                right: Box::new(Expr::Literal(Literal::Int(2))),
+            }),
+            body: vec![Stmt::ExprStmt(Expr::Infix {
+                left: Box::new(Expr::Identifier("x".to_string())),
+                op: Infix::Plus,
+                right: Box::new(Expr::Literal(Literal::Int(1))),
+            })],
+            alt: None,
+        }),
+        Stmt::LetStatement {
+            ident: "x".to_string(),
+            expr: Expr::Literal(Literal::Int(100)),
+        },
+        Stmt::ExprStmt(Expr::If {
+            cond: Box::new(Expr::Infix {
+                left: Box::new(Expr::Literal(Literal::Int(2))),
+                op: Infix::Equal,
+                right: Box::new(Expr::Literal(Literal::Int(2))),
+            }),
+            body: vec![Stmt::ExprStmt(Expr::Infix {
+                left: Box::new(Expr::Identifier("x".to_string())),
+                op: Infix::Plus,
+                right: Box::new(Expr::Literal(Literal::Int(1))),
+            })],
+            alt: Some(vec![Stmt::ExprStmt(Expr::Infix {
+                left: Box::new(Expr::Literal(Literal::Int(1))),
+                op: Infix::Plus,
+                right: Box::new(Expr::Literal(Literal::Int(1))),
+            })]),
+        }),
+        Stmt::LetStatement {
+            ident: "x".to_string(),
+            expr: Expr::Literal(Literal::Int(100)),
         },
     ];
 
