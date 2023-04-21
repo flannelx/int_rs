@@ -190,6 +190,7 @@ impl<'a> Parser<'a> {
             TokenKind::Bang => Prefix::Not,
             _ => bail!("Expected Prefix operator, got {:?}", self.curr_token),
         };
+        self.advance();
         Ok(Expr::Prefix {
             op,
             right: Box::new(self.parse_atom_expr()?),
@@ -400,6 +401,12 @@ fn parse_stmt() {
     return x * 1;
     return 1 + 2;
     return 1 * 2;
+
+
+    !false;
+    !true;
+    +200;
+    -100;
     "#;
     let mut p = Parser::new(input);
     let program = p.parse_program().unwrap();
@@ -441,6 +448,11 @@ fn parse_stmt() {
        Stmt::ReturnStatement(Expr::Infix { left: Box::new(Expr::Identifier("x".to_string())), op: Infix::Multiply, right: Box::new(Expr::Literal(Literal::Int(1)))}),
        Stmt::ReturnStatement(Expr::Infix { left: Box::new(Expr::Literal(Literal::Int(1))), op: Infix::Plus, right: Box::new(Expr::Literal(Literal::Int(2)))}),
        Stmt::ReturnStatement(Expr::Infix { left: Box::new(Expr::Literal(Literal::Int(1))), op: Infix::Multiply, right: Box::new(Expr::Literal(Literal::Int(2)))}),
+
+       Stmt::ExprStmt(Expr::Prefix { op: Prefix::Not, right: Box::new(Expr::Literal(Literal::Bool(false))) }),
+       Stmt::ExprStmt(Expr::Prefix { op: Prefix::Not, right: Box::new(Expr::Literal(Literal::Bool(true))) }),
+       Stmt::ExprStmt(Expr::Prefix { op: Prefix::Plus, right: Box::new(Expr::Literal(Literal::Int(200))) }),
+       Stmt::ExprStmt(Expr::Prefix { op: Prefix::Minus, right: Box::new(Expr::Literal(Literal::Int(100))) }),
     ];
 
     for (res, exp) in program.iter().zip(expected.iter()) {
