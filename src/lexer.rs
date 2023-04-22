@@ -85,7 +85,10 @@ impl<'a> Lexer<'a> {
         while let Some(c) = self.input.next() && c != '"'{
             s.push(c);
         }
-        Some(Token { kind: TokenKind::String, raw: s })
+        Some(Token {
+            kind: TokenKind::String,
+            raw: s,
+        })
     }
 
     pub fn char_to_token(c: &char) -> TokenKind {
@@ -132,7 +135,6 @@ impl<'a> Lexer<'a> {
         Some(kind)
     }
 }
-
 
 #[test]
 fn test_next_token() {

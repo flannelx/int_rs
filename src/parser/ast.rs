@@ -1,4 +1,4 @@
-pub type Program = Vec<Stmt>;
+pub type Program = std::collections::VecDeque<Stmt>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
@@ -24,9 +24,9 @@ pub enum Expr {
         body: Program,
     },
     Call {
-        func: Box<Expr>, // Box<Expr::Identifier>
+        func: String, // Box<Expr::Identifier>
         args: Vec<Expr>,
-    }
+    },
 }
 
 #[derive(PartialEq, Debug, Clone)]

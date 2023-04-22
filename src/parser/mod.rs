@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crate::{
     lexer::Lexer,
     token::{Token, TokenKind},
@@ -92,10 +94,10 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_program(&mut self) -> anyhow::Result<Program> {
-        let mut program: Program = Vec::new();
+        let mut program: Program = VecDeque::new();
 
         while self.curr_token.kind != TokenKind::EOF {
-            program.push(self.parse_statement()?);
+            program.push_back(self.parse_statement()?);
             if self.curr_token.kind == TokenKind::Semicolon {
                 self.advance();
             }
@@ -288,6 +290,9 @@ impl<'a> Parser<'a> {
             self.advance();
         }
         let program = self.parse_block_stmt()?;
+        if matches!(self.curr_token.kind, RBrace) {
+            self.advance()
+        }
         let alt = {
             if self.curr_token.kind != Else {
                 None
@@ -296,6 +301,9 @@ impl<'a> Parser<'a> {
                 Some(self.parse_block_stmt()?)
             }
         };
+        if matches!(self.curr_token.kind, RBrace) {
+            self.advance()
+        }
         Ok(Expr::If {
             cond: Box::new(cond),
             body: program,
@@ -305,25 +313,28 @@ impl<'a> Parser<'a> {
 
     pub fn parse_call_expr(&mut self, ident: Expr) -> anyhow::Result<Expr> {
         use TokenKind::*;
+        let func = {
+            if let Expr::Identifier(func) = ident {
+                func
+            } else {
+                bail!("Expected call identifier, got {:?}", self.curr_token);
+            }
+        };
         if self.curr_token.kind != LParen {
             bail!("Expected left parenthese, got {:?}", self.curr_token);
         }
         self.advance();
         let mut args = Vec::new();
-        while !matches!(self.curr_token.kind, RParen | EOF) {
+        while !matches!(self.curr_token.kind, Semicolon | RParen | EOF) {
             if self.curr_token.kind != Comma {
-                args.push(self.parse_atom_expr()?);
+                args.push(self.parse_expr(Precedence::Lowest)?);
             }
             self.advance();
         }
-        if self.curr_token.kind == RParen {
+        if matches!(self.curr_token.kind, RParen | Semicolon) {
             self.advance();
         }
-
-        Ok(Expr::Call {
-            func: Box::new(ident),
-            args,
-        })
+        Ok(Expr::Call { func, args })
     }
 
     pub fn parse_block_stmt(&mut self) -> anyhow::Result<Program> {
@@ -332,9 +343,9 @@ impl<'a> Parser<'a> {
             bail!("Expected a '{{', got {:?}", self.curr_token);
         }
         self.advance();
-        let mut program: Program = Vec::new();
+        let mut program: Program = VecDeque::new();
         while !matches!(self.curr_token.kind, EOF | RBrace) {
-            program.push(self.parse_statement()?);
+            program.push_back(self.parse_statement()?);
             self.advance();
         }
         if self.curr_token.kind == RBrace {
@@ -480,7 +491,8 @@ fn parse_fn_test() {
                 left: Box::new(Expr::Identifier("x".to_string())),
                 op: Infix::Plus,
                 right: Box::new(Expr::Identifier("y".to_string())),
-            })],
+            })]
+            .into(),
         }),
         Stmt::ExprStmt(Expr::Function {
             ident: "sum".to_string(),
@@ -489,7 +501,8 @@ fn parse_fn_test() {
                 left: Box::new(Expr::Identifier("x".to_string())),
                 op: Infix::Plus,
                 right: Box::new(Expr::Identifier("y".to_string())),
-            })],
+            })]
+            .into(),
         }),
     ];
 
@@ -516,12 +529,13 @@ fn parse_call_test() {
                 left: Box::new(Expr::Identifier("x".to_string())),
                 op: Infix::Plus,
                 right: Box::new(Expr::Identifier("y".to_string())),
-            })],
+            })]
+            .into(),
         }),
         Stmt::LetStatement {
             ident: "s".to_string(),
             expr: Expr::Call {
-                func: Box::new(Expr::Identifier("sum".to_string())),
+                func: "sum".to_string(),
                 args: vec![
                     Expr::Literal(Literal::Int(100)),
                     Expr::Literal(Literal::Int(10)),
@@ -567,7 +581,8 @@ fn parse_if_test() {
                 left: Box::new(Expr::Identifier("x".to_string())),
                 op: Infix::Plus,
                 right: Box::new(Expr::Literal(Literal::Int(1))),
-            })],
+            })]
+            .into(),
             alt: None,
         }),
         Stmt::LetStatement {
@@ -584,12 +599,16 @@ fn parse_if_test() {
                 left: Box::new(Expr::Identifier("x".to_string())),
                 op: Infix::Plus,
                 right: Box::new(Expr::Literal(Literal::Int(1))),
-            })],
-            alt: Some(vec![Stmt::ExprStmt(Expr::Infix {
-                left: Box::new(Expr::Literal(Literal::Int(1))),
-                op: Infix::Plus,
-                right: Box::new(Expr::Literal(Literal::Int(1))),
-            })]),
+            })]
+            .into(),
+            alt: Some(
+                vec![Stmt::ExprStmt(Expr::Infix {
+                    left: Box::new(Expr::Literal(Literal::Int(1))),
+                    op: Infix::Plus,
+                    right: Box::new(Expr::Literal(Literal::Int(1))),
+                })]
+                .into(),
+            ),
         }),
         Stmt::LetStatement {
             ident: "x".to_string(),
