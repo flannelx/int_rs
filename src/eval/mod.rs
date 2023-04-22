@@ -219,16 +219,20 @@ impl Evaluator {
 }
 
 #[test]
-fn eval_ident_test() {
+fn eval_test() {
     let input = r#"
-    let h = "hello";
-    let x = h + " " + "world!";
-    x;
+    let x = 1;
+    let y = 2;
+    let z = "x + y = " + x + y;
+    let hello = "Hello ";
+    fn add(x, y) {
+        x + y;
+    };
+    add(hello, "World! z is " + z);
     "#;
     let mut p = Parser::new(input);
     let program = p.parse_program().unwrap();
     let mut eval = Evaluator::new();
     let ret = eval.eval_block_stmt(program).unwrap();
-    println!("{:?}", eval);
-    println!("{}", ret);
+    assert_eq!(format!("{ret}"), "Hello World! z is x + y = 3");
 }
