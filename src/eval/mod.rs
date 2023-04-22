@@ -138,21 +138,21 @@ impl Evaluator {
                     (Object::String(l), Object::Integer(r)) => Object::String(l + &r.to_string()),
                     (Object::String(l), Object::String(r)) => Object::String(l + &r),
                     (l, r) => {
-                        bail!("Uncompatible type to perform {op:?}, left: {l:?}, right: {r:?}")
+                        bail!("Incompatible type to perform {op:?}, left: {l:?}, right: {r:?}")
                     }
                 },
                 Infix::Equal => match (self.eval_expr(left)?, self.eval_expr(right)?) {
                     (Object::Integer(l), Object::Integer(r)) => Object::Bool(l == r),
                     (Object::String(l), Object::String(r)) => Object::Bool(l == r),
                     (l, r) => {
-                        bail!("Uncompatible type to perform {op:?}, left: {l:?}, right: {r:?}")
+                        bail!("Incompatible type to perform {op:?}, left: {l:?}, right: {r:?}")
                     }
                 },
                 Infix::NotEqual => match (self.eval_expr(left)?, self.eval_expr(right)?) {
                     (Object::Integer(l), Object::Integer(r)) => Object::Bool(l != r),
                     (Object::String(l), Object::String(r)) => Object::Bool(l != r),
                     (l, r) => {
-                        bail!("Uncompatible type to perform {op:?}, left: {l:?}, right: {r:?}")
+                        bail!("Incompatible type to perform {op:?}, left: {l:?}, right: {r:?}")
                     }
                 },
                 _ => unreachable!(),
