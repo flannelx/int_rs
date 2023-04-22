@@ -1,13 +1,12 @@
 mod env;
 
-use anyhow::bail;
-
 use self::env::Env;
 use crate::parser::{
     ast::{Expr, Infix, Literal, Prefix, Program, Stmt},
     Parser,
 };
-use std::{cell::RefCell, rc::Rc};
+use anyhow::bail;
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 macro_rules! otv {
     ($o: expr, $t: ident) => {
@@ -32,6 +31,18 @@ pub enum Object {
     Array,
     Hash,
     Null,
+}
+
+impl Display for Object {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Object::Integer(i) => write!(f, "{}", i),
+            Object::Bool(b) => write!(f, "{}", b),
+            Object::Return(o) => o.fmt(f),
+            Object::String(s) => write!(f, "{}", s),
+            o => write!(f, "{:?}", o),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -119,20 +130,46 @@ impl Evaluator {
     }
 
     pub fn eval_infix(&mut self, left: Expr, op: Infix, right: Expr) -> anyhow::Result<Object> {
+        if matches!(op, Infix::Plus | Infix::Equal | Infix::NotEqual) {
+            return Ok(match op {
+                Infix::Plus => match (self.eval_expr(left)?, self.eval_expr(right)?) {
+                    (Object::Integer(l), Object::Integer(r)) => Object::Integer(l + r),
+                    (Object::Integer(l), Object::String(r)) => Object::String(l.to_string() + &r),
+                    (Object::String(l), Object::Integer(r)) => Object::String(l + &r.to_string()),
+                    (Object::String(l), Object::String(r)) => Object::String(l + &r),
+                    (l, r) => {
+                        bail!("Uncompatible type to perform {op:?}, left: {l:?}, right: {r:?}")
+                    }
+                },
+                Infix::Equal => match (self.eval_expr(left)?, self.eval_expr(right)?) {
+                    (Object::Integer(l), Object::Integer(r)) => Object::Bool(l == r),
+                    (Object::String(l), Object::String(r)) => Object::Bool(l == r),
+                    (l, r) => {
+                        bail!("Uncompatible type to perform {op:?}, left: {l:?}, right: {r:?}")
+                    }
+                },
+                Infix::NotEqual => match (self.eval_expr(left)?, self.eval_expr(right)?) {
+                    (Object::Integer(l), Object::Integer(r)) => Object::Bool(l != r),
+                    (Object::String(l), Object::String(r)) => Object::Bool(l != r),
+                    (l, r) => {
+                        bail!("Uncompatible type to perform {op:?}, left: {l:?}, right: {r:?}")
+                    }
+                },
+                _ => unreachable!(),
+            });
+        }
         let l = otv!(self.eval_expr(left.to_owned())?, Integer);
         let r = otv!(self.eval_expr(right.to_owned())?, Integer);
         #[cfg_attr(rustfmt, rustfmt_skip)]
         Ok(match op {
-            Infix::Plus     => Object::Integer(l + r),
             Infix::Minus    => Object::Integer(l - r),
             Infix::Divide   => Object::Integer(l / r),
             Infix::Multiply => Object::Integer(l * r),
-            Infix::Equal    => Object::Bool(l == r),
-            Infix::NotEqual => Object::Bool(l != r),
             Infix::Gte      => Object::Bool(l >= r),
             Infix::Lte      => Object::Bool(l <= r),
             Infix::Gt       => Object::Bool(l > r),
             Infix::Lt       => Object::Bool(l < r),
+            _ => unreachable!(),
         })
     }
 
@@ -184,15 +221,14 @@ impl Evaluator {
 #[test]
 fn eval_ident_test() {
     let input = r#"
-    fn sum(x, y) {
-        x + y;
-    };
-    sum(1+2, 2);
+    let h = "hello";
+    let x = h + " " + "world!";
+    x;
     "#;
     let mut p = Parser::new(input);
     let program = p.parse_program().unwrap();
     let mut eval = Evaluator::new();
-    let ret = eval.eval_block_stmt(program);
+    let ret = eval.eval_block_stmt(program).unwrap();
     println!("{:?}", eval);
-    println!("{:?}", ret);
+    println!("{}", ret);
 }
