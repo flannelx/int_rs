@@ -25,12 +25,12 @@ pub enum Object {
     Return(Box<Object>),
     Function { params: Vec<String>, body: Program },
     String(String),
+    Null,
 
     // TODO:
     Builtin,
     Array,
     Hash,
-    Null,
 }
 
 impl Display for Object {

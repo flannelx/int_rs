@@ -1,8 +1,8 @@
 #![feature(let_chains)]
 #![allow(dead_code, unused)]
 
-mod eval;
-mod lexer;
-mod parser;
+pub mod eval;
+pub mod lexer;
+pub mod parser;
 pub mod repl;
-mod token;
+pub mod token;

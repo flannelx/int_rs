@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monkey in Rust</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+
+<body class="bg-stone-300">
+    <div class="h-[5vh]">
+        <div class="flex px-2 pt-2 gap-2">
+            <button id="run" class="bg-orange-700 hover:bg-orange-800 p-2 text-center rounded font-bold text-white">
+                Run &#x23F5;
+            </button>
+            <button id="reset" class="bg-white text-stone-600 hover:bg-gray-100 p-2 text-center rounded font-bold">
+                Reset
+            </button>
+        </div>
+    </div>
+    <div class="w-screen h-[95vh] p-2 flex flex-col lg:flex-row gap-[8px]">
+        <textarea class="rounded border-4 border-stone-400 w-full h-1/2 lg:w-1/2 lg:h-full resize-none outline-none px-1"
+            id="input"></textarea>
+        <div class="rounded border-4 border-stone-400 bg-white w-full h-1/2 lg:w-1/2 lg:h-full resize-none outline-none overflow-scroll p-2"
+            id="output"></div>
+    </div>
+    <script src="index.js" type="module"></script>
+</body>
+
+</html>
